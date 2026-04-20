@@ -13,6 +13,8 @@
 
 ## Конфигурации устройств
 ### Spine1
+<details>
+<summary>Spine1 config</summary>
 ```eos
 ! device: Spine1 (vEOS-lab, EOS-4.29.2F)
 !
@@ -80,6 +82,8 @@ router ospf 1
 !
 end
 ```
+</details>
+
 ### Spine2
 ```eos
 ! device: Spine2 (vEOS-lab, EOS-4.29.2F)
