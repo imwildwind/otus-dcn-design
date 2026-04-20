@@ -6,7 +6,7 @@
 
 ### Topology:
 
-![[10260420172432.png]]
+![[20260420172432.png]]
 
 ### Networks Assignment:
 
