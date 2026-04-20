@@ -11,10 +11,13 @@
 3) Настроить в соответствии с подготовленными конфигурациями все хосты.
 4) Проверить состояние OSPF на всех хостах, таблицы маршрутизации и сетевой связанности до loopback адресов других нод.
 
+## Топология
+[Топология сети](../assets/lab01-1.png)
+
 ## Конфигурации устройств
-### Spine1
+
 <details>
-<summary>Spine1 config</summary>
+<summary>Spine1.cfg</summary>
 
 ```eos
 ! device: Spine1 (vEOS-lab, EOS-4.29.2F)
@@ -83,10 +86,11 @@ router ospf 1
 !
 end
 ```
-
 </details>
 
-### Spine2
+<details>
+<summary>Spine2.cfg</summary>
+
 ```eos
 ! device: Spine2 (vEOS-lab, EOS-4.29.2F)
 !
@@ -154,7 +158,11 @@ router ospf 1
 !
 end
 ```
-### Leaf1
+</details>
+
+<details>
+<summary>Leaf1.cfg</summary>
+
 ```eos
 ! device: Leaf1 (vEOS-lab, EOS-4.29.2F)
 !
@@ -212,7 +220,11 @@ router ospf 1
 !
 end
 ```
-### Leaf2
+</details>
+
+<details>
+<summary>Leaf2.cfg</summary>
+
 ```eos
 ! device: Leaf2 (vEOS-lab, EOS-4.29.2F)
 !
@@ -270,7 +282,11 @@ router ospf 1
 !
 end
 ```
-### Leaf3
+</details>
+
+<details>
+<summary>Leaf3.cfg</summary>
+
 ```eos
 ! device: Leaf3 (vEOS-lab, EOS-4.29.2F)
 !
@@ -328,3 +344,16 @@ router ospf 1
 !
 end
 ```
+</details>
+
+## Проверка сетевой связанности
+
+### Spine1
+[OSPF Neighbors](../assets/lab02_spine1_ospf_nb.png)
+[OSPF Database](../assets/lab02_spine1_ospfdb.png)
+[OSPF Routes](../assets/lab02_spine1_ospf_routes.png)
+[Network test to Spine2](../assets/lab02_spine1_to_spine2_test.png)
+
+### Leaf1
+[OSPF Database](../assets/lab02_leaf1_ospfdb.png)
+[Network test to Leaf3](../assets/lab02_leaf1_to_leaf3_test.png)
