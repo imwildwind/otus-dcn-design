@@ -6,7 +6,7 @@
 
 ### Topology:
 
-[[https://github.com/imwildwind/otus-dcn-design/blob/main/labs/lab01/20260420172432.png]]
+[[/labs/lab01/20260420172432.png]]
 
 ### Networks Assignment:
 
