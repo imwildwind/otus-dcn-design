@@ -6,7 +6,7 @@
 
 ### Topology:
 
-![[20260420172432.png]]
+![Топология](../assets/lab01-1.png)
 
 ### Networks Assignment:
 
