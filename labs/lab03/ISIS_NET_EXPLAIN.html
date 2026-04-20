@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IS-IS NET Address — Arista vEOS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Unbounded:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #21262d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+
+    --afi:    #ff7b72;
+    --area:   #ffa657;
+    --sys:    #79c0ff;
+    --nsel:   #56d364;
+
+    --afi-bg:    rgba(255,123,114,0.12);
+    --area-bg:   rgba(255,166,87,0.12);
+    --sys-bg:    rgba(121,192,255,0.12);
+    --nsel-bg:   rgba(86,211,100,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    padding: 40px 24px 60px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  header h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(18px, 4vw, 32px);
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    background: linear-gradient(135deg, #79c0ff 0%, #56d364 50%, #ffa657 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .section {
+    max-width: 860px;
+    margin: 0 auto 40px;
+  }
+
+  .section-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── NET display block ── */
+  .net-display {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .net-display::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--afi), var(--area), var(--sys), var(--nsel));
+  }
+
+  .net-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+  }
+
+  .net-string {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    font-size: clamp(18px, 4vw, 30px);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+
+  .seg {
+    padding: 6px 4px;
+    border-radius: 4px;
+    cursor: default;
+    transition: filter 0.15s, transform 0.15s;
+    position: relative;
+  }
+  .seg:hover { filter: brightness(1.3); transform: translateY(-2px); }
+
+  .dot { color: var(--muted); font-weight: 400; padding: 6px 1px; }
+
+  .c-afi  { color: var(--afi);  background: var(--afi-bg); }
+  .c-area { color: var(--area); background: var(--area-bg); }
+  .c-sys  { color: var(--sys);  background: var(--sys-bg); }
+  .c-nsel { color: var(--nsel); background: var(--nsel-bg); }
+
+  /* ── Legend ── */
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .legend-item {
+    border-radius: 8px;
+    padding: 14px 16px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .legend-item:hover { border-color: currentColor; }
+
+  .legend-item.c-afi  { background: var(--afi-bg);  color: var(--afi); }
+  .legend-item.c-area { background: var(--area-bg); color: var(--area); }
+  .legend-item.c-sys  { background: var(--sys-bg);  color: var(--sys); }
+  .legend-item.c-nsel { background: var(--nsel-bg); color: var(--nsel); }
+
+  .legend-item .leg-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .legend-item .leg-value {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .legend-item .leg-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); border-color: var(--muted); }
+  .tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  /* ── Example cards ── */
+  .example-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    display: none;
+  }
+  .example-card.active { display: block; }
+
+  .ex-meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.7;
+  }
+  .ex-meta strong { color: var(--text); }
+
+  .ex-net {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: clamp(16px, 3vw, 24px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+    gap: 0;
+  }
+
+  .breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  @media(max-width:560px) { .breakdown { grid-template-columns: 1fr; } }
+
+  .bd-row {
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .bd-field {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .bd-val {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .bd-note {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ── Config block ── */
+  .config-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  .cfg-kw  { color: #ff7b72; }
+  .cfg-val { color: #79c0ff; }
+  .cfg-net { color: #ffa657; font-weight: 700; }
+  .cfg-cm  { color: #8b949e; font-style: italic; }
+  .cfg-pn  { color: #56d364; }
+
+  /* ── Formula ── */
+  .formula-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .formula {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: clamp(13px, 2.5vw, 18px);
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  .f-seg {
+    padding: 10px 14px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .f-seg .f-name {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .f-plus {
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    font-size: 20px;
+    padding: 0 2px;
+  }
+
+  .rules {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .rule {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  .rule strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── SYS-ID builder ── */
+  .builder {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .builder-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .builder-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 16px;
+  }
+  .builder-input:focus { border-color: var(--sys); }
+
+  .builder-result {
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    min-height: 40px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    padding: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  .builder-note {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .error { color: #ff7b72; font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IS-IS NET Address</h1>
+  <p>Структура · Примеры · Arista vEOS</p>
+</header>
+
+<!-- FORMULA -->
+<div class="section">
+  <div class="section-title">Структура NET-адреса</div>
+  <div class="formula-block">
+    <div class="formula">
+      <div class="f-seg c-afi" style="background:var(--afi-bg);color:var(--afi)">
+        <span class="f-name">AFI</span>
+        <span>49</span>
+      </div>
+      <div class="f-plus">.</div>
+      <div class="f-seg c-area" style="background:var(--area-bg);color:var(--area)">
+        <span class="f-name">Area ID</span>
+        <span>XXXX[.XXXX...]</span>
+      </div>
+      <div class="f-plus">.</div>
+      <div class="f-seg c-sys" style="background:var(--sys-bg);color:var(--sys)">
+        <span class="f-name">System ID</span>
+        <span>XXXX.XXXX.XXXX</span>
+      </div>
+      <div class="f-plus">.</div>
+      <div class="f-seg c-nsel" style="background:var(--nsel-bg);color:var(--nsel)">
+        <span class="f-name">N-SEL</span>
+        <span>00</span>
+      </div>
+    </div>
+
+    <div class="rules">
+      <div class="rule">
+        <strong>AFI</strong>
+        Всегда <code style="color:var(--afi)">49</code> — обозначает «частное» (private) адресное пространство IS-IS (аналог RFC 1918 для IP)
+      </div>
+      <div class="rule">
+        <strong>Area ID</strong>
+        1–13 байт, записывается группами по 2 байта. Все роутеры одной зоны имеют одинаковый Area ID. Минимум — <code style="color:var(--area)">0001</code>
+      </div>
+      <div class="rule">
+        <strong>System ID</strong>
+        Ровно 6 байт (48 бит), всегда 3 группы по 4 hex-символа. Уникален в пределах зоны. Часто берётся из MAC или IP
+      </div>
+      <div class="rule">
+        <strong>N-SEL</strong>
+        Network Selector. На маршрутизаторе всегда <code style="color:var(--nsel)">00</code>. Ненулевые значения — для ES (end-systems, не роутеры)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANONICAL EXAMPLE -->
+<div class="section">
+  <div class="section-title">Разбор адреса</div>
+  <div class="net-display">
+    <div class="net-label">NET ADDRESS</div>
+    <div class="net-string">
+      <span class="seg c-afi">49</span>
+      <span class="dot">.</span>
+      <span class="seg c-area">0001</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys">1921</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys">6800</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys">1001</span>
+      <span class="dot">.</span>
+      <span class="seg c-nsel">00</span>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item c-afi">
+        <div class="leg-title">AFI</div>
+        <div class="leg-value">49</div>
+        <div class="leg-desc">Authority and Format Identifier<br>Всегда 49 для IS-IS</div>
+      </div>
+      <div class="legend-item c-area">
+        <div class="leg-title">Area ID</div>
+        <div class="leg-value">0001</div>
+        <div class="leg-desc">Номер зоны IS-IS<br>Одинаковый на всех роутерах зоны</div>
+      </div>
+      <div class="legend-item c-sys">
+        <div class="leg-title">System ID</div>
+        <div class="leg-value">1921.6800.1001</div>
+        <div class="leg-desc">IP 192.168.0.100<br>→ 1921.6800.1001 (из Loopback)</div>
+      </div>
+      <div class="legend-item c-nsel">
+        <div class="leg-title">N-SEL</div>
+        <div class="leg-value">00</div>
+        <div class="leg-desc">Network Selector<br>Всегда 00 для роутеров</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EXAMPLES TABS -->
+<div class="section">
+  <div class="section-title">Практические примеры</div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab(0)">Пример 1 · IP-based</div>
+    <div class="tab" onclick="showTab(1)">Пример 2 · MAC-based</div>
+    <div class="tab" onclick="showTab(2)">Пример 3 · Multi-area</div>
+    <div class="tab" onclick="showTab(3)">Пример 4 · Spine/Leaf</div>
+  </div>
+
+  <!-- Example 1 -->
+  <div class="example-card active" id="ex0">
+    <div class="ex-meta">
+      <strong>Сценарий:</strong> Один роутер Arista vEOS, Loopback0 = <code>10.0.0.1/32</code>, зона 1.<br>
+      Конвертируем IP в System ID: <code>10.0.0.1</code> → дополняем до 12 цифр → <code>010.000.000.001</code> → <code>0100.0000.0001</code>
+    </div>
+    <div class="ex-net">
+      <span class="seg c-afi" style="background:var(--afi-bg);color:var(--afi);border-radius:4px;padding:4px 6px">49</span>
+      <span class="dot">.</span>
+      <span class="seg c-area" style="background:var(--area-bg);color:var(--area);border-radius:4px;padding:4px 6px">0001</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys" style="background:var(--sys-bg);color:var(--sys);border-radius:4px;padding:4px 6px">0100</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys" style="background:var(--sys-bg);color:var(--sys);border-radius:4px;padding:4px 6px">0000</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys" style="background:var(--sys-bg);color:var(--sys);border-radius:4px;padding:4px 6px">0001</span>
+      <span class="dot">.</span>
+      <span class="seg c-nsel" style="background:var(--nsel-bg);color:var(--nsel);border-radius:4px;padding:4px 6px">00</span>
+    </div>
+    <div class="breakdown">
+      <div class="bd-row" style="background:var(--afi-bg);color:var(--afi)">
+        <span class="bd-field">AFI</span>
+        <span class="bd-val">49</span>
+        <span class="bd-note">Стандартное значение IS-IS</span>
+      </div>
+      <div class="bd-row" style="background:var(--area-bg);color:var(--area)">
+        <span class="bd-field">Area ID</span>
+        <span class="bd-val">0001</span>
+        <span class="bd-note">Зона 1</span>
+      </div>
+      <div class="bd-row" style="background:var(--sys-bg);color:var(--sys)">
+        <span class="bd-field">System ID</span>
+        <span class="bd-val">0100.0000.0001</span>
+        <span class="bd-note">из IP 10.0.0.1 → 010.000.000.001</span>
+      </div>
+      <div class="bd-row" style="background:var(--nsel-bg);color:var(--nsel)">
+        <span class="bd-field">N-SEL</span>
+        <span class="bd-val">00</span>
+        <span class="bd-note">Роутер (всегда 00)</span>
+      </div>
+    </div>
+    <div class="config-block">
+<span class="cfg-cm">! Arista vEOS — роутер R1</span>
+<span class="cfg-kw">router isis</span> <span class="cfg-pn">UNDERLAY</span>
+   <span class="cfg-kw">net</span> <span class="cfg-net">49.0001.0100.0000.0001.00</span>
+   <span class="cfg-kw">is-type</span> <span class="cfg-val">level-2</span>
+   <span class="cfg-kw">!
+</span><span class="cfg-kw">interface</span> <span class="cfg-val">Loopback0</span>
+   <span class="cfg-kw">ip address</span> <span class="cfg-val">10.0.0.1/32</span>
+   <span class="cfg-kw">isis enable</span> <span class="cfg-pn">UNDERLAY</span>
+    </div>
+  </div>
+
+  <!-- Example 2 -->
+  <div class="example-card" id="ex1">
+    <div class="ex-meta">
+      <strong>Сценарий:</strong> System ID из MAC-адреса интерфейса Management.<br>
+      MAC: <code>00:1c:73:ab:cd:ef</code> → убираем <code>:</code> → <code>001c.73ab.cdef</code>
+    </div>
+    <div class="ex-net">
+      <span class="seg c-afi" style="background:var(--afi-bg);color:var(--afi);border-radius:4px;padding:4px 6px">49</span>
+      <span class="dot">.</span>
+      <span class="seg c-area" style="background:var(--area-bg);color:var(--area);border-radius:4px;padding:4px 6px">0002</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys" style="background:var(--sys-bg);color:var(--sys);border-radius:4px;padding:4px 6px">001c</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys" style="background:var(--sys-bg);color:var(--sys);border-radius:4px;padding:4px 6px">73ab</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys" style="background:var(--sys-bg);color:var(--sys);border-radius:4px;padding:4px 6px">cdef</span>
+      <span class="dot">.</span>
+      <span class="seg c-nsel" style="background:var(--nsel-bg);color:var(--nsel);border-radius:4px;padding:4px 6px">00</span>
+    </div>
+    <div class="breakdown">
+      <div class="bd-row" style="background:var(--afi-bg);color:var(--afi)">
+        <span class="bd-field">AFI</span>
+        <span class="bd-val">49</span>
+        <span class="bd-note">Стандартное значение IS-IS</span>
+      </div>
+      <div class="bd-row" style="background:var(--area-bg);color:var(--area)">
+        <span class="bd-field">Area ID</span>
+        <span class="bd-val">0002</span>
+        <span class="bd-note">Зона 2 — другая зона</span>
+      </div>
+      <div class="bd-row" style="background:var(--sys-bg);color:var(--sys)">
+        <span class="bd-field">System ID</span>
+        <span class="bd-val">001c.73ab.cdef</span>
+        <span class="bd-note">из MAC 00:1c:73:ab:cd:ef</span>
+      </div>
+      <div class="bd-row" style="background:var(--nsel-bg);color:var(--nsel)">
+        <span class="bd-field">N-SEL</span>
+        <span class="bd-val">00</span>
+        <span class="bd-note">Роутер (всегда 00)</span>
+      </div>
+    </div>
+    <div class="config-block">
+<span class="cfg-cm">! Arista vEOS — System ID из MAC</span>
+<span class="cfg-kw">router isis</span> <span class="cfg-pn">UNDERLAY</span>
+   <span class="cfg-kw">net</span> <span class="cfg-net">49.0002.001c.73ab.cdef.00</span>
+   <span class="cfg-kw">is-type</span> <span class="cfg-val">level-2</span>
+   <span class="cfg-kw">address-family ipv4 unicast</span>
+    </div>
+  </div>
+
+  <!-- Example 3 -->
+  <div class="example-card" id="ex2">
+    <div class="ex-meta">
+      <strong>Сценарий:</strong> L1/L2 роутер, стоящий на границе двух зон. Роутер имеет <strong>два NET</strong> — по одному на зону. Area ID может быть длиннее (до 13 байт).
+    </div>
+    <div class="ex-net" style="margin-bottom:8px">
+      <span style="font-size:11px;color:var(--muted);margin-right:10px;white-space:nowrap">Зона 1:</span>
+      <span class="seg c-afi" style="background:var(--afi-bg);color:var(--afi);border-radius:4px;padding:4px 5px">49</span>
+      <span class="dot">.</span>
+      <span class="seg c-area" style="background:var(--area-bg);color:var(--area);border-radius:4px;padding:4px 5px">0001</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys" style="background:var(--sys-bg);color:var(--sys);border-radius:4px;padding:4px 5px">0a0a.0a0a.000a</span>
+      <span class="dot">.</span>
+      <span class="seg c-nsel" style="background:var(--nsel-bg);color:var(--nsel);border-radius:4px;padding:4px 5px">00</span>
+    </div>
+    <div class="ex-net" style="margin-bottom:20px">
+      <span style="font-size:11px;color:var(--muted);margin-right:10px;white-space:nowrap">Зона 2:</span>
+      <span class="seg c-afi" style="background:var(--afi-bg);color:var(--afi);border-radius:4px;padding:4px 5px">49</span>
+      <span class="dot">.</span>
+      <span class="seg c-area" style="background:var(--area-bg);color:var(--area);border-radius:4px;padding:4px 5px">0002</span>
+      <span class="dot">.</span>
+      <span class="seg c-sys" style="background:var(--sys-bg);color:var(--sys);border-radius:4px;padding:4px 5px">0a0a.0a0a.000a</span>
+      <span class="dot">.</span>
+      <span class="seg c-nsel" style="background:var(--nsel-bg);color:var(--nsel);border-radius:4px;padding:4px 5px">00</span>
+    </div>
+    <div class="config-block">
+<span class="cfg-cm">! L1/L2 border router — два NET (System ID одинаковый!)</span>
+<span class="cfg-kw">router isis</span> <span class="cfg-pn">UNDERLAY</span>
+   <span class="cfg-kw">net</span> <span class="cfg-net">49.0001.0a0a.0a0a.000a.00</span>
+   <span class="cfg-kw">net</span> <span class="cfg-net">49.0002.0a0a.0a0a.000a.00</span>
+   <span class="cfg-kw">is-type</span> <span class="cfg-val">level-1-2</span>
+   <span class="cfg-cm">   ! System ID должен совпадать в обоих NET!</span>
+    </div>
+  </div>
+
+  <!-- Example 4 -->
+  <div class="example-card" id="ex3">
+    <div class="ex-meta">
+      <strong>Сценарий:</strong> Фабрика Spine-Leaf на Arista. Spine = зона 49.0001, Leaf = та же зона. System ID из Loopback IP каждого устройства.
+    </div>
+    <div class="config-block">
+<span class="cfg-cm">! ── SPINE-1  (Loopback0: 10.255.0.1) ──────────────</span>
+<span class="cfg-kw">router isis</span> <span class="cfg-pn">EVPN_UNDERLAY</span>
+   <span class="cfg-kw">net</span> <span class="cfg-net">49.0001.1025.5000.0001.00</span>
+   <span class="cfg-kw">is-type</span> <span class="cfg-val">level-2</span>
+   <span class="cfg-kw">router-id ipv4</span> <span class="cfg-val">10.255.0.1</span>
+
+<span class="cfg-cm">! ── SPINE-2  (Loopback0: 10.255.0.2) ──────────────</span>
+<span class="cfg-kw">router isis</span> <span class="cfg-pn">EVPN_UNDERLAY</span>
+   <span class="cfg-kw">net</span> <span class="cfg-net">49.0001.1025.5000.0002.00</span>
+   <span class="cfg-kw">is-type</span> <span class="cfg-val">level-2</span>
+
+<span class="cfg-cm">! ── LEAF-1   (Loopback0: 10.255.1.1) ──────────────</span>
+<span class="cfg-kw">router isis</span> <span class="cfg-pn">EVPN_UNDERLAY</span>
+   <span class="cfg-kw">net</span> <span class="cfg-net">49.0001.1025.5001.0001.00</span>
+   <span class="cfg-kw">is-type</span> <span class="cfg-val">level-2</span>
+
+<span class="cfg-cm">! ── LEAF-2   (Loopback0: 10.255.1.2) ──────────────</span>
+<span class="cfg-kw">router isis</span> <span class="cfg-pn">EVPN_UNDERLAY</span>
+   <span class="cfg-kw">net</span> <span class="cfg-net">49.0001.1025.5001.0002.00</span>
+   <span class="cfg-kw">is-type</span> <span class="cfg-val">level-2</span>
+    </div>
+  </div>
+</div>
+
+<!-- SYSID BUILDER -->
+<div class="section">
+  <div class="section-title">Конвертер IP → System ID</div>
+  <div class="builder">
+    <div class="builder-label">Введите IPv4-адрес Loopback (например, 192.168.1.10)</div>
+    <input class="builder-input" type="text" id="ipInput" placeholder="10.0.0.1" oninput="buildNet()" />
+    <div class="builder-result" id="netResult">
+      <span style="color:var(--muted);font-size:14px">Введите IP-адрес выше</span>
+    </div>
+    <div class="builder-note" id="buildNote"></div>
+    <div class="error" id="buildErr"></div>
+  </div>
+</div>
+
+<script>
+function showTab(i) {
+  document.querySelectorAll('.tab').forEach((t,idx) => t.classList.toggle('active', idx===i));
+  document.querySelectorAll('.example-card').forEach((c,idx) => c.classList.toggle('active', idx===i));
+}
+
+function buildNet() {
+  const raw = document.getElementById('ipInput').value.trim();
+  const result = document.getElementById('netResult');
+  const note = document.getElementById('buildNote');
+  const err = document.getElementById('buildErr');
+
+  err.textContent = '';
+  note.textContent = '';
+
+  if (!raw) {
+    result.innerHTML = '<span style="color:var(--muted);font-size:14px">Введите IP-адрес выше</span>';
+    return;
+  }
+
+  const parts = raw.split('.');
+  if (parts.length !== 4 || parts.some(p => isNaN(p) || p==='' || +p<0 || +p>255)) {
+    err.textContent = '✗ Неверный формат IPv4';
+    result.innerHTML = '<span style="color:var(--muted);font-size:14px">—</span>';
+    return;
+  }
+
+  // Pad each octet to 3 digits, join to 12 chars, split into 4-char groups
+  const padded = parts.map(p => String(p).padStart(3,'0')).join('');
+  const s1 = padded.slice(0,4);
+  const s2 = padded.slice(4,8);
+  const s3 = padded.slice(8,12);
+  const sysid = `${s1}.${s2}.${s3}`;
+
+  const seg = (cls, v) =>
+    `<span style="background:var(--${cls}-bg);color:var(--${cls});border-radius:4px;padding:4px 6px;font-weight:700">${v}</span>`;
+  const dot = `<span style="color:var(--muted);padding:0 1px">.</span>`;
+
+  result.innerHTML =
+    seg('afi','49') + dot +
+    seg('area','0001') + dot +
+    seg('sys', s1) + dot +
+    seg('sys', s2) + dot +
+    seg('sys', s3) + dot +
+    seg('nsel','00');
+
+  note.textContent = `IP ${raw}  →  ${parts.map(p=>String(p).padStart(3,'0')).join('.')}  →  ${sysid}  |  NET: 49.0001.${sysid}.00`;
+}
+</script>
+</body>
+</html>
