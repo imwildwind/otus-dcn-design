@@ -349,11 +349,11 @@ end
 ## Проверка сетевой связанности
 
 ### Spine1
-[OSPF Neighbors](../assets/lab02_spine1_ospf_nb.png)
-[OSPF Database](../assets/lab02_spine1_ospfdb.png)
-[OSPF Routes](../assets/lab02_spine1_ospf_routes.png)
-[Network test to Spine2](../assets/lab02_spine1_to_spine2_test.png)
+![OSPF Neighbors](../assets/lab02_spine1_ospf_nb.png)
+![OSPF Database](../assets/lab02_spine1_ospfdb.png)
+![OSPF Routes](../assets/lab02_spine1_ospf_routes.png)
+![Network test to Spine2](../assets/lab02_spine1_to_spine2_test.png)
 
 ### Leaf1
-[OSPF Database](../assets/lab02_leaf1_ospfdb.png)
-[Network test to Leaf3](../assets/lab02_leaf1_to_leaf3_test.png)
+![OSPF Database](../assets/lab02_leaf1_ospfdb.png)
+![Network test to Leaf3](../assets/lab02_leaf1_to_leaf3_test.png)
