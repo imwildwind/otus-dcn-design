@@ -6,11 +6,7 @@
 
 ### Topology:
 
-<<<<<<< HEAD
 ![Топология](../assets/lab01-1.png)
-=======
-[[/labs/lab01/20260420172432.png]]
->>>>>>> c13d5a396efeb329be12d2f2685257e9a1b49d6d
 
 ### Networks Assignment:
 
